@@ -6,7 +6,7 @@ import { indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatchi
 import { closeBrackets, closeBracketsKeymap, autocompletion, completionKeymap } from '@codemirror/autocomplete';
 import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import { markdown } from '@codemirror/lang-markdown';
-import CodeChunk from './CodeChunk';
+import PyodideService from '../services/PyodideService';
 import './QuartoEditor.css';
 
 const LANGUAGE_COLORS = {
@@ -154,10 +154,6 @@ const QuartoEditor = ({ initialContent = '', onChange, onCodeSelect }) => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      if (source.includes('undefined_variable')) {
-        throw new Error("NameError: name 'undefined_variable' is not defined");
-      }
-
       if (language === 'javascript') {
         const logs = [];
         const originalLog = console.log;
@@ -173,10 +169,24 @@ const QuartoEditor = ({ initialContent = '', onChange, onCodeSelect }) => {
           console.log = originalLog;
         }
         setChunkOutputs(prev => ({ ...prev, [chunkId]: { type: 'success', output: logs.join('\n') || '実行完了' } }));
+      } else if (language === 'python') {
+        try {
+          const result = await PyodideService.runPython(source);
+          if (result.hasError) {
+            setChunkOutputs(prev => ({ ...prev, [chunkId]: { type: 'error', error: result.output } }));
+            setChunkStatuses(prev => ({ ...prev, [chunkId]: 'error' }));
+          } else {
+            setChunkOutputs(prev => ({ ...prev, [chunkId]: { type: 'success', output: result.output || '実行完了' } }));
+            setChunkStatuses(prev => ({ ...prev, [chunkId]: 'success' }));
+          }
+        } catch (error) {
+          setChunkOutputs(prev => ({ ...prev, [chunkId]: { type: 'error', error: error.message } }));
+          setChunkStatuses(prev => ({ ...prev, [chunkId]: 'error' }));
+        }
       } else {
         setChunkOutputs(prev => ({ ...prev, [chunkId]: { type: 'success', output: `${language} コードが実行されました（シミュレート）` } }));
+        setChunkStatuses(prev => ({ ...prev, [chunkId]: 'success' }));
       }
-      setChunkStatuses(prev => ({ ...prev, [chunkId]: 'success' }));
     } catch (error) {
       setChunkOutputs(prev => ({ ...prev, [chunkId]: { type: 'error', error: error.message, stack: error.stack } }));
       setChunkStatuses(prev => ({ ...prev, [chunkId]: 'error' }));
@@ -198,8 +208,71 @@ const QuartoEditor = ({ initialContent = '', onChange, onCodeSelect }) => {
 
   const getLanguageColor = (lang) => LANGUAGE_COLORS[lang] || '#6c757d';
 
+  const insertText = useCallback((before, after = '') => {
+    if (!viewRef.current) return;
+    const selection = viewRef.current.state.selection.main;
+    const selectedText = viewRef.current.state.sliceDoc(selection.from, selection.to);
+    
+    viewRef.current.dispatch({
+      changes: {
+        from: selection.from,
+        to: selection.to,
+        insert: before + selectedText + after
+      },
+      selection: { anchor: selection.from + before.length }
+    });
+    viewRef.current.focus();
+  }, []);
+
+  const insertAtLineStart = useCallback((prefix) => {
+    if (!viewRef.current) return;
+    const cursor = viewRef.current.state.selection.main.head;
+    const line = viewRef.current.state.doc.lineAt(cursor);
+    
+    viewRef.current.dispatch({
+      changes: { from: line.from, insert: prefix }
+    });
+    viewRef.current.focus();
+  }, []);
+
+  const selectedLang = 'python';
+
+  const selectedChunk = chunks.find(c => c.id === selectedChunkId);
+  const selectedChunkOutput = selectedChunkId ? chunkOutputs[selectedChunkId] : null;
+  const selectedChunkStatus = selectedChunkId ? chunkStatuses[selectedChunkId] : 'idle';
+
   return (
-    <div className={`quarto-editor ${showChunkPanel ? 'with-panel' : ''}`}>
+    <div className={`quarto-editor ${selectedChunkId ? 'with-chunk-panel' : ''}`}>
+      <div className="editor-toolbar">
+        <button onClick={() => insertAtLineStart('# ')} title="見出し1">H1</button>
+        <button onClick={() => insertAtLineStart('## ')} title="見出し2">H2</button>
+        <button onClick={() => insertAtLineStart('### ')} title="見出し3">H3</button>
+        <span className="toolbar-divider"></span>
+        <button onClick={() => insertText('**', '**')} title="太字"><strong>B</strong></button>
+        <button onClick={() => insertText('*', '*')} title="斜体"><em>I</em></button>
+        <button onClick={() => insertText('`', '`')} title="インラインコード">``</button>
+        <span className="toolbar-divider"></span>
+        <button onClick={() => insertAtLineStart('- ')} title="リスト">•</button>
+        <button onClick={() => insertAtLineStart('1. ')} title="番号付きリスト">1.</button>
+        <button onClick={() => insertAtLineStart('> ')} title="引用">"</button>
+        <span className="toolbar-divider"></span>
+        <button onClick={() => insertText('\n```' + selectedLang + '\n', '\n```\n')} title="コードブロック">```</button>
+        <button onClick={() => insertText('[]()', '')} title="リンク">🔗</button>
+        <button onClick={() => insertText('![alt]()', '')} title="画像">🖼️</button>
+        <span className="toolbar-spacer"></span>
+        {selectedChunkId && (
+          <button 
+            onClick={() => {
+              setSelectedChunkId(null);
+              if (onCodeSelect) onCodeSelect('', '');
+            }} 
+            title="選択を解除"
+            className="toolbar-close-btn"
+          >
+            ✕ 閉じる
+          </button>
+        )}
+      </div>
       <div className="editor-wrapper">
         <div className="editor-container" ref={editorRef} />
 
@@ -207,7 +280,7 @@ const QuartoEditor = ({ initialContent = '', onChange, onCodeSelect }) => {
           {chunks.map((chunk, index) => (
             <div
               key={chunk.id}
-              className={`minimap-item ${chunkStatuses[chunk.id] ? `minimap-item--${chunkStatuses[chunk.id]}` : ''}`}
+              className={`minimap-item ${chunkStatuses[chunk.id] ? `minimap-item--${chunkStatuses[chunk.id]}` : ''} ${selectedChunkId === chunk.id ? 'minimap-item--selected' : ''}`}
               style={{
                 backgroundColor: getLanguageColor(chunk.language),
                 top: `${(index / Math.max(chunks.length, 1)) * 100}%`
@@ -221,55 +294,52 @@ const QuartoEditor = ({ initialContent = '', onChange, onCodeSelect }) => {
           ))}
         </div>
 
-        <div className="chunk-sidebar">
-          <div className="chunk-sidebar__header">
-            <span>コードブロック</span>
-            <span className="chunk-count">{chunks.length}</span>
-          </div>
-          <div className="chunk-sidebar__list">
-            {chunks.map((chunk) => (
-              <div
-                key={chunk.id}
-                className={`chunk-sidebar__item ${selectedChunkId === chunk.id ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedChunkId(chunk.id);
-                  if (onCodeSelect) onCodeSelect(chunk.code, chunk.language);
-                }}
+        {selectedChunkId && (
+          <div className="chunk-panel">
+            <div className="chunk-panel__header">
+              <span className="chunk-panel__lang" style={{ backgroundColor: getLanguageColor(selectedChunk?.language) }}>
+                {selectedChunk?.language}
+              </span>
+              <span className={`chunk-panel__status chunk-panel__status--${selectedChunkStatus}`}>
+                {selectedChunkStatus === 'loading' ? '● 実行中' :
+                  selectedChunkStatus === 'success' ? '✓ 成功' :
+                    selectedChunkStatus === 'error' ? '✗ エラー' : '○ 待機中'}
+              </span>
+            </div>
+            <div className="chunk-panel__actions">
+              <button 
+                className="chunk-panel__run-btn"
+                onClick={() => handleChunkExecute(selectedChunkId, selectedChunk?.language, selectedChunk?.code)}
+                disabled={selectedChunkStatus === 'loading'}
               >
-                <div
-                  className="chunk-sidebar__color"
-                  style={{ backgroundColor: getLanguageColor(chunk.language) }}
-                />
-                <span className="chunk-sidebar__lang">{chunk.language}</span>
-                <span className={`chunk-sidebar__status chunk-sidebar__status--${chunkStatuses[chunk.id] || 'idle'}`}>
-                  {chunkStatuses[chunk.id] === 'loading' ? '●' :
-                    chunkStatuses[chunk.id] === 'success' ? '✓' :
-                      chunkStatuses[chunk.id] === 'error' ? '✗' : '○'}
-                </span>
+                ▶ 実行
+              </button>
+              {selectedChunkStatus !== 'idle' && (
+                <button 
+                  className="chunk-panel__reset-btn"
+                  onClick={() => handleChunkReset(selectedChunkId)}
+                >
+                  × リセット
+                </button>
+              )}
+            </div>
+            {selectedChunkOutput && (
+              <div className={`chunk-panel__output chunk-panel__output--${selectedChunkOutput.type}`}>
+                {selectedChunkOutput.type === 'error' ? (
+                  <div className="output-error">
+                    <strong>エラー:</strong> {selectedChunkOutput.error}
+                  </div>
+                ) : (
+                  <div className="output-success">
+                    <strong>結果:</strong>
+                    <pre>{selectedChunkOutput.output}</pre>
+                  </div>
+                )}
               </div>
-            ))}
+            )}
           </div>
-        </div>
+        )}
       </div>
-
-      {chunks.map(chunk => (
-        <CodeChunk
-          key={chunk.id}
-          chunk={chunk}
-          status={chunkStatuses[chunk.id] || 'idle'}
-          output={chunkOutputs[chunk.id]}
-          isSelected={selectedChunkId === chunk.id}
-          isHovered={hoveredChunkId === chunk.id}
-          onExecute={() => handleChunkExecute(chunk.id, chunk.language, chunk.code)}
-          onReset={() => handleChunkReset(chunk.id)}
-          onSelect={() => {
-            setSelectedChunkId(chunk.id);
-            if (onCodeSelect) onCodeSelect(chunk.code, chunk.language);
-          }}
-          onMouseEnter={() => setHoveredChunkId(chunk.id)}
-          onMouseLeave={() => setHoveredChunkId(null)}
-        />
-      ))}
 
       <button
         className="toggle-panel-btn"

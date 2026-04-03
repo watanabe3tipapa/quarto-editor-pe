@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
+import { marked } from 'marked';
+import RenderService from './services/RenderService';
 import QuartoEditor from './components/QuartoEditor';
 import SampleDocument from './components/SampleDocument';
 import FloatingButtons from './components/FloatingButtons';
@@ -83,6 +85,50 @@ function App() {
     }
   }, []);
 
+  const handleRender = useCallback(async () => {
+    try {
+      let htmlContent;
+      const useQuarto = window.confirm('Quarto CLIを使用しますか？\n\nOK = Quarto CLI\nキャンセル = ライブラリ（marked）');
+      
+      if (useQuarto) {
+        htmlContent = await RenderService.renderWithQuarto(content);
+      } else {
+        htmlContent = RenderService.renderWithMarked(content);
+      }
+
+      const fullHtml = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quarto Document</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+    h1, h2, h3 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+    code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 6px; overflow-x: auto; }
+    pre code { background: none; padding: 0; }
+  </style>
+</head>
+<body>
+${htmlContent}
+</body>
+</html>`;
+      
+      const blob = new Blob([fullHtml], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'quarto-document.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert('レンダリングエラー: ' + error.message);
+    }
+  }, [content]);
+
   const handleInsertCode = useCallback((code) => {
     setContent(prev => prev + '\n\n```' + selectedLang + '\n' + code + '\n```');
     setShowAI(false);
@@ -106,6 +152,9 @@ function App() {
             </button>
             <button onClick={handleSave}>
               💾 SAVE
+            </button>
+            <button onClick={handleRender}>
+              📄 RENDER (DL)
             </button>
             <button onClick={handleClear}>
               🗑️ CLEAR
