@@ -26,7 +26,6 @@
 | `@codemirror/language` | シンタックスハイライト・折りたたみ |
 | `@codemirror/autocomplete` | 自動補完 |
 | `@codemirror/search` | 検索・置換 |
-| `@codemirror/lint` | リント |
 | `@codemirror/lang-markdown` | Markdownモード |
 
 ### 開発・運用
@@ -34,40 +33,9 @@
 | カテゴリ | 技術 |
 |----------|------|
 | **デプロイ** | Vercel / Netlify / 静的配信 |
-| **スタイリング** | CSS Modules |
-| **ロギング** | console.log (browser) |
+| **スタイリング** | CSS |
 
-## アーキテクチャ
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         App.jsx                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ QuartoEditor │  │FloatingBtns  │  │   AIAssistant    │  │
-│  │              │  │              │  │                  │  │
-│  │ CodeMirror 6 │  │  🤖 AI Btn   │  │ • Chat           │  │
-│  │              │  │              │  │ • Explain        │  │
-│  │ ┌──────────┐ │  └──────────────┘  │ • Complete       │  │
-│  │ │CodeChunk │ │                      │ • Refactor       │  │
-│  │ │          │ │                      └──────────────────┘  │
-│  │ │┌────────┐│ │                                           │
-│  │ ││RunBtn  ││ │                                           │
-│  │ │├────────┤│ │                                           │
-│  │ ││Output  ││ │                                           │
-│  │ ││Panel   ││ │                                           │
-│  │ │└────────┘│ │                                           │
-│  │ └──────────┘ │                                           │
-│  └──────────────┘                                           │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      OllamaService                           │
-│                    (http://localhost:11434)                  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### コンポーネント構造
+## コンポーネント構造
 
 ```
 src/
@@ -78,193 +46,63 @@ src/
 │   │   ├── CodeChunk.jsx        # コードブロックUIラッパー
 │   │   │   ├── RunButton.jsx    # 実行ボタン
 │   │   │   ├── StatusIndicator  # ○●✓✗ ステータス
-│   │   │   └── OutputPanel.jsx  # 結果表示
+│   │   │   ├── OutputPanel.jsx  # 結果表示
+│   │   │   └── LintPanel.jsx    # リント表示
 │   │   │
 │   │   └── SampleDocument.jsx   # プレビューモード
 │   │
 │   ├── FloatingButtons.jsx      # フローティングAIボタン
-│   └── AIAssistant.jsx          # Ollama AIチャット
-│       └── (Chat / History)
+│   ├── AIAssistant.jsx          # Ollama AIチャット
+│   └── LintPanel.jsx            # リントパネル
 │
 ├── services/
-│   └── OllamaService.js         # Ollama APIクライアント
-│       ├── checkConnection()
-│       ├── getModels()
-│       ├── chat()
-│       ├── explainCode()
-│       ├── completeCode()
-│       └── refactorCode()
+│   ├── OllamaService.js         # Ollama APIクライアント
+│   └── LinterService.js         # コードリントサービス
 │
-└── styles/                      # CSSモジュール
+└── styles/                      # CSSファイル
 ```
 
-## 状態管理
+## 主な機能
 
-React Hooks によるローカル状態管理:
+- **リアルタイムMarkdown編集** - CodeMirror 6ベースのエディタ
+- **ライブプレビュー** - Edit/Previewモード切り替え
+- **コードブロック実行** - JavaScript実行 / Pythonシミュレート
+- **AIアシスタント** - Ollama接続によるコード説明・補完・リファクタリング
+- **ファイル操作** - アップロード・保存・クリア
+- **コードブロック解析** - 言語自動正規化 (python/py → python, js/javascript → js)
 
-```jsx
-// App.jsx
-const [content, setContent] = useState(DEFAULT_CONTENT)      // ドキュメント内容
-const [editingMode, setEditingMode] = useState(true)         // Edit/Preview
-const [showAI, setShowAI] = useState(false)                  // AIAssist表示
-const [selectedCode, setSelectedCode] = useState('')          // 選択コード
-const [selectedLang, setSelectedLang] = useState('python')    // 選択言語
-
-// QuartoEditor.jsx
-const [chunks, setChunks] = useState([])                    // 解析済みチャンク
-const [chunkOutputs, setChunkOutputs] = useState({})         // 出力結果
-const [chunkStatuses, setChunkStatuses] = useState({})       // 実行状態
-const [selectedChunkId, setSelectedChunkId] = useState(null) // 選択チャンク
-```
-
-## CodeMirror 6 統合
-
-### Extension構成
-
-```javascript
-EditorState.create({
-  extensions: [
-    // 表示系
-    lineNumbers(),
-    highlightActiveLineGutter(),
-    highlightSpecialChars(),
-    highlightActiveLine(),
-    
-    // 編集系
-    history(),
-    indentOnInput(),
-    bracketMatching(),
-    closeBrackets(),
-    drawSelection(),
-    dropCursor(),
-    
-    // 機能系
-    autocompletion(),
-    highlightSelectionMatches(),
-    foldGutter(),
-    
-    // キーバインド
-    keymap.of([
-      ...closeBracketsKeymap,
-      ...defaultKeymap,
-      ...searchKeymap,
-      ...historyKeymap,
-      ...foldKeymap,
-      ...completionKeymap,
-      ...lintKeymap,
-    ]),
-    
-    // 言語
-    markdown(),
-    
-    // リスナー
-    updateListener,
-  ]
-})
-```
-
-### チャンク解析
-
-正規表現でMarkdownからコードブロックを抽出:
-
-```javascript
-const chunkRegex = /```\{(\w+)\}([\s\S]*?)```/g
-// 例: ```{python}
-//       code
-//       ```
-```
-
-## Ollama API
-
-### エンドポイント
-
-| エンドポイント | メソッド | 用途 |
-|---------------|---------|------|
-| `/api/tags` | GET | 利用可能モデル一覧 |
-| `/api/generate` | POST | テキスト生成 |
-| `/api/chat` | POST | チャット会話 |
-
-### リクエスト例
-
-```javascript
-// チャット
-POST http://localhost:11434/api/chat
-{
-  "model": "llama3.2",
-  "messages": [
-    { "role": "user", "content": "Hello" }
-  ],
-  "stream": false
-}
-```
-
-## コードブロック実行
-
-### JavaScript
-
-```javascript
-const logs = []
-const originalLog = console.log
-console.log = (...args) => {
-  logs.push(args.map(String).join(' '))
-  originalLog.apply(console, args)
-}
-try {
-  new Function(source)()
-} finally {
-  console.log = originalLog
-}
-```
-
-### Python（シミュレート）
-
-現在Pythonコードは実行せず、シミュレート結果を返します。
-実際のPython実行には以下が必要:
-- Pyodide (WebAssembly Python)
-- サーバーサイド実行
-- サンドボックス環境
-
-## 貢献
-
-### 開発環境セットアップ
+## セットアップ
 
 ```bash
-git clone https://github.com/your-repo/quarto-editor-pe.git
+git clone <repository-url>
 cd quarto-editor-pe
 npm install
 npm run dev
 ```
 
-### コーディング規約
+ブラウザで `http://localhost:5173` を開きます。
 
-- React 関数コンポーネント + Hooks
-- CSS Modules または 標準CSS
-- コンポーネントは1ファイル1エクスポート
+## AIアシスタントを使う
 
-### テスト
+Ollamaが必要です:
 
 ```bash
-# ビルドテスト
-npm run build
+# macOS
+brew install ollama
 
-# プレビュー
-npm run preview
+# モデルをダウンロード
+ollama pull llama3.2
+
+# Ollamaを起動
+ollama serve
 ```
 
-## ロードマップ
+## ビルド
 
-- [ ] Python実行（Pyodide統合）
-- [ ] 複数ファイル対応
-- [ ] テーマ切り替え
-- [ ] キーボードショートカット追加
-- [ ] エディタ分割表示
-- [ ] リアルタイム共同編集
-- [ ] OpenAI/Anthropic API対応
+```bash
+npm run build
+```
 
 ## ライセンス
 
-MIT License - see [LICENSE](LICENSE) for details.
-
-## 作者
-
-Quarto Editor PE Team
+MIT License
