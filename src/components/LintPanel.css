@@ -1,0 +1,105 @@
+.lint-panel {
+  background: #fff;
+  border-top: 1px solid #e9ecef;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.lint-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  position: sticky;
+  top: 0;
+}
+
+.lint-panel__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.lint-panel__stats {
+  display: flex;
+  gap: 12px;
+}
+
+.lint-stat {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.lint-stat--error {
+  color: #dc3545;
+}
+
+.lint-stat--warning {
+  color: #ffc107;
+}
+
+.lint-stat--info {
+  color: #6c757d;
+}
+
+.lint-panel__list {
+  padding: 8px;
+}
+
+.lint-issue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-bottom: 4px;
+  background: #f8f9fa;
+}
+
+.lint-issue:last-child {
+  margin-bottom: 0;
+}
+
+.lint-issue--error {
+  background: #fff5f5;
+  border-left: 3px solid #dc3545;
+}
+
+.lint-issue--warning {
+  background: #fffbeb;
+  border-left: 3px solid #ffc107;
+}
+
+.lint-issue--info {
+  background: #f8f9fa;
+  border-left: 3px solid #6c757d;
+}
+
+.lint-issue__icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.lint-issue__line {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #6c757d;
+  background: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.lint-issue__message {
+  flex: 1;
+  color: #495057;
+}
+
+.lint-issue__rule {
+  font-size: 9px;
+  color: #adb5bd;
+  font-family: 'JetBrains Mono', monospace;
+}

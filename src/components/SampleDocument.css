@@ -1,0 +1,49 @@
+.sample-document {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.sample-document__content {
+  line-height: 1.8;
+}
+
+.sample-document__content h1 {
+  font-size: 28px;
+  margin: 32px 0 16px;
+  color: #2c3e50;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 8px;
+}
+
+.sample-document__content h2 {
+  font-size: 22px;
+  margin: 24px 0 12px;
+  color: #34495e;
+}
+
+.sample-document__content h3 {
+  font-size: 18px;
+  margin: 20px 0 8px;
+  color: #555;
+}
+
+.sample-document__content p {
+  margin: 12px 0;
+  color: #333;
+}
+
+.code-block {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 16px 0;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.code-block code {
+  font-family: inherit;
+}

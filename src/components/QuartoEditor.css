@@ -1,0 +1,211 @@
+.quarto-editor {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px);
+  background: #fff;
+  position: relative;
+}
+
+.quarto-editor.with-panel {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.editor-wrapper {
+  flex: 1;
+  display: flex;
+  position: relative;
+  min-height: 0;
+}
+
+.editor-container {
+  flex: 1;
+  overflow: hidden;
+}
+
+.editor-container .cm-editor {
+  height: 100%;
+}
+
+.minimap {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  background: #f8f9fa;
+  border-left: 1px solid #e9ecef;
+  padding: 8px 0;
+  z-index: 10;
+}
+
+.minimap-item {
+  position: absolute;
+  right: 2px;
+  width: 8px;
+  height: 16px;
+  border-radius: 2px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s;
+}
+
+.minimap-item:hover {
+  opacity: 1;
+  transform: scaleX(1.5);
+}
+
+.minimap-item--loading {
+  animation: minimap-pulse 1s infinite;
+}
+
+.minimap-item--success {
+  box-shadow: 0 0 4px #28a745;
+}
+
+.minimap-item--error {
+  box-shadow: 0 0 4px #dc3545;
+}
+
+@keyframes minimap-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.chunk-sidebar {
+  position: absolute;
+  right: 16px;
+  top: 0;
+  bottom: 0;
+  width: 200px;
+  background: #fff;
+  border-left: 1px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.quarto-editor:not(.with-panel) .chunk-sidebar {
+  display: none;
+}
+
+.chunk-sidebar__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  font-size: 12px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.chunk-count {
+  background: #e9ecef;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.chunk-sidebar__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.chunk-sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chunk-sidebar__item:hover {
+  background: #f1f3f5;
+}
+
+.chunk-sidebar__item.active {
+  background: #e7f5ff;
+}
+
+.chunk-sidebar__color {
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.chunk-sidebar__lang {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: lowercase;
+}
+
+.chunk-sidebar__status {
+  font-size: 12px;
+}
+
+.chunk-sidebar__status--idle {
+  color: #adb5bd;
+}
+
+.chunk-sidebar__status--loading {
+  color: #ffc107;
+}
+
+.chunk-sidebar__status--success {
+  color: #28a745;
+}
+
+.chunk-sidebar__status--error {
+  color: #dc3545;
+}
+
+.toggle-panel-btn {
+  position: fixed;
+  right: 216px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 48px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #6c757d;
+  z-index: 100;
+  transition: all 0.2s;
+}
+
+.toggle-panel-btn:hover {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.quarto-editor.with-panel .toggle-panel-btn {
+  right: 216px;
+}
+
+.quarto-editor:not(.with-panel) .toggle-panel-btn {
+  right: 0;
+}
+
+.chunks-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.chunks-overlay > * {
+  pointer-events: auto;
+}

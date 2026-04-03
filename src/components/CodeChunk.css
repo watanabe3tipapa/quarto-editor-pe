@@ -1,0 +1,65 @@
+.code-chunk {
+  margin: 4px 16px;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  background: #fafbfc;
+  transition: all 0.2s;
+  overflow: hidden;
+}
+
+.code-chunk:hover,
+.code-chunk--selected {
+  border-color: var(--lang-color);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.code-chunk__bar {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+  gap: 8px;
+  min-height: 28px;
+}
+
+.code-chunk__lang {
+  font-size: 9px;
+  font-weight: 600;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.code-chunk__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.code-chunk__badge {
+  font-size: 10px;
+}
+
+.code-chunk__btn {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.code-chunk__btn--reset {
+  background: #e9ecef;
+  color: #6c757d;
+}
+
+.code-chunk__btn--reset:hover {
+  background: #dee2e6;
+  color: #495057;
+}
